@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Générateur 3D de Produits</title>
+    <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+    <style>
+        body { font-family: sans-serif; text-align: center; padding: 50px; background-color: #f4f4f9; }
+        .container { max-width: 600px; margin: auto; border: 1px solid #ddd; padding: 30px; border-radius: 15px; background: white; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        #model-container { width: 100%; height: 400px; background: #eee; margin-top: 20px; border-radius: 10px; display: flex; align-items: center; justify-content: center; position: relative; }
+        /* AJOUT : Important pour que le viewer soit visible */
+        model-viewer { width: 100%; height: 100%; display: block; }
+        button { background: #007bff; color: white; border: none; padding: 12px 25px; cursor: pointer; border-radius: 5px; font-size: 16px; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        #status { margin-top: 15px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Générateur 3D</h1>
+    <p>Sélectionnez 2 images ou plus pour simuler le modèle.</p>
+    <input type="file" id="fileInput" multiple accept="image/*">
+    <br><br>
+    <!-- MODIFICATION : ajout de type="button" pour éviter le refresh -->
+    <button type="button" id="uploadBtn">Générer le Modèle 3D</button>
+    <div id="status"></div>
+
+    <div id="model-container">
+        <p id="placeholder">Le modèle s'affichera ici</p>
+    </div>
+</div>
+
+<script>
+    const btn = document.getElementById('uploadBtn');
+    const status = document.getElementById('status');
+    const container = document.getElementById('model-container');
+
+    btn.onclick = async (event) => {
+        // MODIFICATION : On empêche formellement tout rechargement
+        event.preventDefault(); 
+        
+        const files = document.getElementById('fileInput').files;
+        if (files.length < 2) {
+            alert("Sélectionnez au moins 2 images !");
+            return;
+        }
+
+        status.innerText = "⏳ Traitement en cours...";
+        status.style.color = "orange";
+        btn.disabled = true;
+
+        const formData = new FormData();
+        for (let f of files) { formData.append('files[]', f); }
+
+        try {
+            const res = await fetch('http://127.0.0.1:5000/upload', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+                status.innerText = "✅ Succès !";
+                status.style.color = "green";
+                
+                // On affiche le modèle
+                const modelUrl = `http://127.0.0.1:5000${data.model_url}`;
+                console.log("Chargement du modèle :", modelUrl);
+                
+                container.innerHTML = `
+                    <model-viewer src="${modelUrl}" 
+                                  auto-rotate 
+                                  camera-controls 
+                                  shadow-intensity="1">
+                    </model-viewer>`;
+            } else {
+                status.innerText = "❌ Erreur: " + data.error;
+                status.style.color = "red";
+            }
+        } catch (err) {
+            status.innerText = "❌ Erreur de connexion au serveur.";
+            status.style.color = "red";
+        } finally {
+            btn.disabled = false;
+        }
+    };
+</script>
+
+</body>
+</html>
