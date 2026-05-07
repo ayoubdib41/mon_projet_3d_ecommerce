@@ -3,12 +3,18 @@ import subprocess
 import shutil
 import struct
 import json
+import os
+import sys
 
-# --- CONFIGURATION MESHROOM ---
-# Sur TON PC : Laisse "meshroom_batch" (ça ne marchera pas mais fera le cube de test)
-# Sur le PC DE TON AMI : Il doit mettre le chemin complet vers meshroom_batch.exe
-# Exemple : MESHROOM_EXECUTABLE = r"C:\Meshroom-2023.1.0\meshroom_batch.exe"
-MESHROOM_EXECUTABLE = "meshroom_batch" 
+# On cherche le dossier racine du projet
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# On définit le chemin vers Meshroom (il devra être dans un dossier nommé 'Meshroom')
+MESHROOM_EXECUTABLE = os.path.join(BASE_DIR, "Meshroom", "meshroom_batch.exe")
+
+# Si le fichier n'existe pas dans le dossier, on essaie la commande globale
+if not os.path.exists(MESHROOM_EXECUTABLE):
+    MESHROOM_EXECUTABLE = "meshroom_batch"
 
 def create_simple_glb(output_path):
     # Données d'un cube très simple
@@ -45,7 +51,7 @@ def create_simple_glb(output_path):
         f.write(json_p)
         f.write(struct.pack('<II', len(bin_p), 0x004E4942))
         f.write(bin_p)
-        
+
 def run_3d_reconstruction(image_paths, output_folder, product_id):
     """Tente Meshroom, sinon fait un cube de simulation."""
     input_dir = os.path.dirname(image_paths[0])
